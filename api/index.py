@@ -8,6 +8,7 @@ from typing import List
 
 app = FastAPI()
 
+# Requirement: Enable CORS for any origin
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -19,21 +20,22 @@ class InputPayload(BaseModel):
     regions: List[str]
     threshold_ms: int
 
-# Correct path logic for Vercel
+# Robust pathing for Vercel's environment
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-# Move up one level from /api to the root to find the JSON
-DATA_PATH = os.path.join(BASE_DIR, "..", "q-vercel-latency.json")
+DATA_FILE = os.path.join(BASE_DIR, "..", "q-vercel-latency.json")
 
-def load_data():
-    with open(DATA_PATH, "r") as f:
+def get_data():
+    with open(DATA_FILE, "r") as f:
         return json.load(f)
 
-DATA = load_data()
+DATA = get_data()
 
 @app.post("/api/analyze")
 async def analyze(payload: InputPayload):
     result = {}
+    
     for region in payload.regions:
+        # Filter data for the specific region
         rows = [r for r in DATA if r["region"] == region]
         
         if not rows:
@@ -42,12 +44,15 @@ async def analyze(payload: InputPayload):
 
         latencies = [r["latency_ms"] for r in rows]
         uptimes = [r["uptime_pct"] for r in rows]
+        
+        # Calculate breaches based on the threshold provided in the POST body
         breaches = sum(1 for x in latencies if x > payload.threshold_ms)
 
         result[region] = {
-            "avg_latency": round(float(np.mean(latencies)), 2),
-            "p95_latency": round(float(np.percentile(latencies, 95)), 2),
-            "avg_uptime": round(float(np.mean(uptimes)), 2),
+            "avg_latency": float(np.mean(latencies)),
+            "p95_latency": float(np.percentile(latencies, 95)),
+            "avg_uptime": float(np.mean(uptimes)),
             "breaches": breaches
         }
+
     return result
