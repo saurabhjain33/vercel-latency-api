@@ -9,13 +9,14 @@ from typing import List
 app = FastAPI()
 
 # Requirement: Enable CORS for any origin
+# Updated CORS section
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=["*"],      # Allows any site to call your API
+    allow_credentials=True,
+    allow_methods=["*"],      # Allows POST, GET, OPTIONS, etc.
+    allow_headers=["*"],      # Allows all headers
 )
-
 class InputPayload(BaseModel):
     regions: List[str]
     threshold_ms: int
