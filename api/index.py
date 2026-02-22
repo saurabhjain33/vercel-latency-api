@@ -10,6 +10,7 @@ app = FastAPI()
 
 # Requirement: Enable CORS for any origin
 # Updated CORS section
+# Keep this to handle the internal FastAPI logic
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
