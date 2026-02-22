@@ -1,33 +1,28 @@
+import os
+import json
+import numpy as np
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List
-import json
-import numpy as np
-import os
 
 app = FastAPI()
 
-# Enable CORS
+# Enable CORS for ALL origins (required by the prompt)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_methods=["POST"],
+    allow_methods=["*"], # Prompt asks for POST, but "*" is safer for CORS preflight
     allow_headers=["*"],
 )
 
-# Input model
-class InputPayload(BaseModel):
-    regions: List[str]
-    threshold_ms: int
-
-# Load telemetry data
-BASE_DIR = os.path.dirname(__file__)
+# Load data - Use absolute path relative to this file
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_FILE = os.path.join(BASE_DIR, "..", "q-vercel-latency.json")
 
+# It is better to load data INSIDE the function or globally with a try/except
 with open(DATA_FILE, "r") as f:
     DATA = json.load(f)
-
 def p95(values):
     if not values:
         return 0.0
