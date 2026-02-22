@@ -8,53 +8,46 @@ from typing import List
 
 app = FastAPI()
 
-# Enable CORS for ALL origins (required by the prompt)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_methods=["*"], # Prompt asks for POST, but "*" is safer for CORS preflight
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Load data - Use absolute path relative to this file
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_FILE = os.path.join(BASE_DIR, "..", "q-vercel-latency.json")
+class InputPayload(BaseModel):
+    regions: List[str]
+    threshold_ms: int
 
-# It is better to load data INSIDE the function or globally with a try/except
-with open(DATA_FILE, "r") as f:
-    DATA = json.load(f)
-def p95(values):
-    if not values:
-        return 0.0
-    return float(np.percentile(values, 95))
+# Correct path logic for Vercel
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# Move up one level from /api to the root to find the JSON
+DATA_PATH = os.path.join(BASE_DIR, "..", "q-vercel-latency.json")
+
+def load_data():
+    with open(DATA_PATH, "r") as f:
+        return json.load(f)
+
+DATA = load_data()
 
 @app.post("/api/analyze")
 async def analyze(payload: InputPayload):
-
     result = {}
-
     for region in payload.regions:
         rows = [r for r in DATA if r["region"] == region]
-
+        
         if not rows:
-            result[region] = {
-                "avg_latency": 0,
-                "p95_latency": 0,
-                "avg_uptime": 0,
-                "breaches": 0
-            }
+            result[region] = {"avg_latency": 0, "p95_latency": 0, "avg_uptime": 0, "breaches": 0}
             continue
 
         latencies = [r["latency_ms"] for r in rows]
         uptimes = [r["uptime_pct"] for r in rows]
-
         breaches = sum(1 for x in latencies if x > payload.threshold_ms)
 
         result[region] = {
-            "avg_latency": float(np.mean(latencies)),
-            "p95_latency": p95(latencies),
-            "avg_uptime": float(np.mean(uptimes)),
+            "avg_latency": round(float(np.mean(latencies)), 2),
+            "p95_latency": round(float(np.percentile(latencies, 95)), 2),
+            "avg_uptime": round(float(np.mean(uptimes)), 2),
             "breaches": breaches
         }
-
     return result
