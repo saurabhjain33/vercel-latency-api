@@ -12,10 +12,10 @@ app = FastAPI()
 # Updated CORS section
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],      # Allows any site to call your API
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"],      # Allows POST, GET, OPTIONS, etc.
-    allow_headers=["*"],      # Allows all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 class InputPayload(BaseModel):
     regions: List[str]
